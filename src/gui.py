@@ -1,6 +1,7 @@
 # gui.py
-from PyQt5.QtWidgets import QMainWindow, QToolBar, QAction, QFileDialog, QListWidget, QStatusBar, QWidget, QVBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QToolBar, QAction, QFileDialog, QListWidget, QStatusBar, QWidget, QVBoxLayout, QPlainTextEdit, QHBoxLayout
 import os
+import subprocess
 from apj_handler import process_apj_file
 
 class ExcelImporterGUI(QMainWindow):
@@ -10,12 +11,10 @@ class ExcelImporterGUI(QMainWindow):
         # Declare apj_file_path as an instance variable
         self.apj_file_path = None
 
-        self.init_ui()
-
-    def init_ui(self):
         # Create widgets
         self.list_widget = QListWidget(self)
         self.status_bar = QStatusBar()
+        self.file_content_display = QPlainTextEdit(self)
 
         # Create a toolbar
         toolbar = QToolBar("Toolbar")
@@ -35,13 +34,27 @@ class ExcelImporterGUI(QMainWindow):
         self.list_widget.itemClicked.connect(self.item_selected)
 
         # Create layout
-        layout = QWidget()
-        layout_layout = QVBoxLayout(layout)
-        layout_layout.addWidget(toolbar)
-        layout_layout.addWidget(self.list_widget)
+        layout = QHBoxLayout()  # Using QHBoxLayout to organize widgets horizontally
+        left_widget = QWidget()
+        right_widget = QWidget()
+
+        # Create a QVBoxLayout for the left side (list_widget)
+        left_layout = QVBoxLayout(left_widget)
+        left_layout.addWidget(toolbar)
+        left_layout.addWidget(self.list_widget)
+
+        # Create a QVBoxLayout for the right side (file_content_display)
+        right_layout = QVBoxLayout(right_widget)
+        right_layout.addWidget(self.file_content_display)
+
+        # Add both left and right widgets to the main layout
+        layout.addWidget(left_widget)
+        layout.addWidget(right_widget)
 
         # Set the central widget
-        self.setCentralWidget(layout)
+        central_widget = QWidget()
+        central_widget.setLayout(layout)
+        self.setCentralWidget(central_widget)
 
         # Set the status bar
         self.setStatusBar(self.status_bar)
@@ -122,15 +135,19 @@ class ExcelImporterGUI(QMainWindow):
                 hardware_hw_path = os.path.join(selected_directory_path, 'Hardware.hw')
 
                 if os.path.exists(hardware_hw_path):
-                    # Display a message or take action if 'Hardware.hw' is found
-                    self.list_widget.clear()
-                    self.list_widget.addItem(f"'Hardware.hw' found in: {selected_directory_path}")
+                    # Read and display the contents of 'Hardware.hw' in the QPlainTextEdit
+                    with open(hardware_hw_path, 'r', encoding='utf-8') as file:
+                        file_content = file.read()
+                        self.file_content_display.setPlainText(file_content)
+
+                    # Display a message in the status bar
+                    self.status_bar.showMessage(f"'Hardware.hw' displayed in window from: {selected_directory_path}")
                 else:
-                    self.list_widget.clear()
-                    self.list_widget.addItem(f"'Hardware.hw' not found in: {selected_directory_path}")
+                    # Display a message in the status bar
+                    self.status_bar.showMessage(f"'Hardware.hw' not found in: {selected_directory_path}")
 
             except Exception as e:
-                print(f"Error finding 'Hardware.hw': {str(e)}")
+                print(f"Error finding and displaying 'Hardware.hw': {str(e)}")
                 self.status_bar.showMessage(f"Error: {str(e)}")
         else:
             self.status_bar.showMessage("Please import an APJ file first.")
