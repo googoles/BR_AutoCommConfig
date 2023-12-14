@@ -1,10 +1,12 @@
 # gui.py
-from PyQt5.QtWidgets import QMainWindow, QToolBar, QAction, QFileDialog, QListWidget, QStatusBar, QWidget, QVBoxLayout, QPlainTextEdit, QHBoxLayout
+from PyQt5.QtWidgets import QMainWindow, QMessageBox, QAction, QFileDialog, QListWidget, QStatusBar, QWidget, QVBoxLayout, QPlainTextEdit, QHBoxLayout, QLabel
 import os
 import subprocess
+import traceback
 from apj_handler import process_apj_file
 
 class ExcelImporterGUI(QMainWindow):
+    
     def __init__(self):
         super().__init__()
 
@@ -16,20 +18,6 @@ class ExcelImporterGUI(QMainWindow):
         self.status_bar = QStatusBar()
         self.file_content_display = QPlainTextEdit(self)
 
-        # Create a toolbar
-        toolbar = QToolBar("Toolbar")
-        self.addToolBar(toolbar)
-
-        # Create "Import Project" action and add it to the toolbar
-        import_project_action = QAction('Import Project', self)
-        import_project_action.triggered.connect(self.import_apj)
-        toolbar.addAction(import_project_action)
-
-        # Create "Import Excel" action and add it to the toolbar
-        import_excel_action = QAction('Import Excel', self)
-        import_excel_action.triggered.connect(self.import_excel)
-        toolbar.addAction(import_excel_action)
-
         # Connect the item selection signal to a custom function
         self.list_widget.itemClicked.connect(self.item_selected)
 
@@ -38,13 +26,14 @@ class ExcelImporterGUI(QMainWindow):
         left_widget = QWidget()
         right_widget = QWidget()
 
-        # Create a QVBoxLayout for the left side (list_widget)
+        # Create a QVBoxLayout for the left side (Status: toolbar and QListWidget)
         left_layout = QVBoxLayout(left_widget)
-        left_layout.addWidget(toolbar)
+        left_layout.addWidget(QLabel("Status"))  # Label for the left half plane
         left_layout.addWidget(self.list_widget)
 
-        # Create a QVBoxLayout for the right side (file_content_display)
+        # Create a QVBoxLayout for the right side (Configuration: file_content_display)
         right_layout = QVBoxLayout(right_widget)
+        right_layout.addWidget(QLabel("Configuration"))  # Label for the right half plane
         right_layout.addWidget(self.file_content_display)
 
         # Add both left and right widgets to the main layout
@@ -62,6 +51,22 @@ class ExcelImporterGUI(QMainWindow):
         # Set the main window properties
         self.setGeometry(300, 300, 1600, 1200)  # Set the window size to "1600 x 1200"
         self.setWindowTitle('Excel Importer')
+
+        # Create menubar
+        menubar = self.menuBar()
+
+        # Create File menu
+        file_menu = menubar.addMenu('File')
+
+        # Create "Import Project" action and add it to the File menu
+        import_project_action = QAction('Import Project', self)
+        import_project_action.triggered.connect(self.import_apj)
+        file_menu.addAction(import_project_action)
+
+        # Create "Import Excel" action and add it to the File menu
+        import_excel_action = QAction('Import Excel', self)
+        import_excel_action.triggered.connect(self.import_excel)
+        file_menu.addAction(import_excel_action)
 
     def import_apj(self):
         # Open a file dialog to select the APJ file
@@ -128,8 +133,6 @@ class ExcelImporterGUI(QMainWindow):
             # Append '\Physical' between the root directory and the selected directory
             selected_directory_path = os.path.normpath(os.path.join(root_directory, 'Physical', selected_directory))
 
-            print(f"Attempting to find 'Hardware.hw' in: {selected_directory_path}")
-
             try:
                 # Check if 'Hardware.hw' exists in the selected directory
                 hardware_hw_path = os.path.join(selected_directory_path, 'Hardware.hw')
@@ -140,15 +143,23 @@ class ExcelImporterGUI(QMainWindow):
                         file_content = file.read()
                         self.file_content_display.setPlainText(file_content)
 
-                    # Display a message in the status bar
-                    self.status_bar.showMessage(f"'Hardware.hw' displayed in window from: {selected_directory_path}")
+                    # Display a success popup message
+                    success_message = f"'Hardware.hw' displayed in Configuration from: {selected_directory_path}"
+                    QMessageBox.information(self, 'Success', success_message)
+
                 else:
-                    # Display a message in the status bar
-                    self.status_bar.showMessage(f"'Hardware.hw' not found in: {selected_directory_path}")
+                    # Display a error popup message
+                    error_message = f"'Hardware.hw' not found in Configuration: {selected_directory_path}"
+                    QMessageBox.warning(self, 'Error', error_message)
 
             except Exception as e:
                 print(f"Error finding and displaying 'Hardware.hw': {str(e)}")
-                self.status_bar.showMessage(f"Error: {str(e)}")
-        else:
-            self.status_bar.showMessage("Please import an APJ file first.")
+                traceback.print_exc()  # Print the traceback to see detailed error information
 
+                # Display an error popup message
+                error_message = f"Error: {str(e)}"
+                QMessageBox.critical(self, 'Error', error_message)
+
+        else:
+            # Display a message in a popup if no APJ file is imported
+            QMessageBox.warning(self, 'Warning', "Please import an APJ file first.")
